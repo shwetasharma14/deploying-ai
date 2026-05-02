@@ -15,6 +15,8 @@ You must include at least **three services** in your system.
 ### Service 1: API Calls
 
 * One service must use an API as its back end.
+
+
 * You can refer to the list of [public and free APIs on GitHub](https://github.com/public-apis/public-apis).
 * This service may simply return the API’s output to the user, but the response must not be provided verbatim. Instead, transform or rephrase the output, for example, by summarizing, rewriting in a natural tone, or converting structured data into written text.
 
