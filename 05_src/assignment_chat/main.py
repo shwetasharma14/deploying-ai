@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langgraph.graph import StateGraph, MessagesState, START
 from langchain.chat_models import init_chat_model
 from langgraph.prebuilt.tool_node import ToolNode, tools_condition
@@ -18,20 +20,23 @@ from utils.logger import get_logger
 
 
 _logs = get_logger(__name__)
-load_dotenv(".env")
-load_dotenv(".secrets")
 
-# Set OpenAI environment variables for LangChain
-os.environ["OPENAI_API_KEY"] = os.getenv('API_GATEWAY_KEY', '')
-os.environ["OPENAI_API_BASE"] = 'https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1'
+env_dir = Path(__file__).resolve().parent
+load_dotenv(env_dir / ".env")
+load_dotenv(env_dir / ".secrets")
 
-# Disable LangSmith tracing to avoid authentication errors
-os.environ["LANGCHAIN_TRACING_V2"] = "false"
-os.environ["LANGCHAIN_ENDPOINT"] = ""
+api_gateway_key = os.getenv("API_GATEWAY_KEY")
+if not api_gateway_key:
+    raise ValueError(
+        "Missing API_GATEWAY_KEY environment variable. "
+        "Set API_GATEWAY_KEY in .env, .secrets, or export it before running the app."
+    )
 
-# Initialize chat model with API key from environment
 chat_agent = init_chat_model(
-    "openai:gpt-4o-mini",
+    "gpt-4o-mini",
+    model_provider="openai",
+    base_url="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
+    default_headers={"x-api-key": api_gateway_key},
 )
 
 # Define available tools
