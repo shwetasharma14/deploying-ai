@@ -1,20 +1,27 @@
 from langchain.tools import tool
 import re
 from pathlib import Path
-
+import traceback
 import pandas as pd
 import chromadb
 from dotenv import load_dotenv
 import os
 from chromadb.utils import embedding_functions
 from langchain_openai import OpenAIEmbeddings
+from openai import OpenAI
+from chromadb.utils import embedding_functions
+import traceback
+
+client = OpenAI(base_url='https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1',
+                    api_key='any value',
+                    default_headers={"x-api-key": os.getenv('API_GATEWAY_KEY')})
 
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGCHAIN_API_KEY"] = ""
 os.environ["LANGCHAIN_ENDPOINT"] = ""
 os.environ["LANGCHAIN_PROJECT"] = ""
 
-import traceback
+
 
 env_dir = Path(__file__).resolve().parent
 load_dotenv(env_dir / ".env")
@@ -22,11 +29,21 @@ load_dotenv(env_dir / ".secrets")
 
 api_gateway_key = os.getenv("API_GATEWAY_KEY")
 
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small",   # or any embedding model your gateway supports
-    base_url="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
-    api_key=api_gateway_key,
-)
+#embeddings = OpenAIEmbeddings(
+#    model="text-embedding-3-small",   # or any embedding model your gateway supports
+#    base_url="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
+#    api_key=api_gateway_key,
+#)
+
+try:
+    embeddings = client.embeddings.create(
+        input="hello world",
+        model="text-embedding-3-small"
+    )
+    print("Success! Embedding length:", len(embeddings.data[0].embedding))
+except Exception as e:
+    print(f"Error type: {type(e).__name__}")
+    print(f"Error: {e}")
 
 
 
@@ -106,8 +123,48 @@ def _lexical_fallback(query: str) -> str:
     return response.strip()
 
 
-from chromadb.utils import embedding_functions
-import traceback
+class CustomEmbeddingFunction:
+    def __init__(self):
+        self._name = "custom_embedding_fn"
+
+    def name(self):
+        return self._name
+
+    def __call__(self, input):
+        return [get_embedding(t) for t in input]
+
+    def embed_documents(self, input):
+        return [get_embedding(t) for t in input]
+
+    def embed_query(self, input):
+        if isinstance(input, list):
+            input = input[0]
+        return get_embedding(input)
+
+
+
+def get_embedding(text):
+    if isinstance(text, list):
+        text = text[0]
+
+    text = text.replace("\n", " ")
+
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+
+    emb = response.data[0].embedding
+
+    if not isinstance(emb, list):
+        raise RuntimeError(f"Embedding is not a list! Got: {type(emb)}, value: {emb}")
+
+    return emb
+
+
+
+def chroma_embedding_fn(texts):
+    return [get_embedding(text) for text in texts]
 
 def _get_semantic_collection():
     global _semantic_client, _semantic_collection
@@ -118,17 +175,14 @@ def _get_semantic_collection():
         _ensure_chroma_dir()
         _semantic_client = chromadb.PersistentClient(path=str(_CHROMA_DIR))
 
-        print("DEBUG: Initializing Chroma OpenAIEmbeddingFunction...")
-        embedding_fn = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=api_gateway_key,
-            api_base="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
-            model_name="text-embedding-3-small",
-        )
+        # Initialize your custom embedding function
+        embedding_fn = CustomEmbeddingFunction()
 
         print("DEBUG: Listing existing collections...")
         existing = [c.name for c in _semantic_client.list_collections()]
         print("DEBUG: Existing collections:", existing)
 
+        # If collection already exists, load it with the same embedding function
         if _COLLECTION_NAME in existing:
             print("DEBUG: Collection exists, loading with embedding_fn...")
             _semantic_collection = _semantic_client.get_collection(
@@ -137,6 +191,7 @@ def _get_semantic_collection():
             )
             return _semantic_collection
 
+        # Otherwise create a new collection
         print("DEBUG: Loading knowledge base CSV...")
         knowledge_df = _load_knowledge_base()
 
