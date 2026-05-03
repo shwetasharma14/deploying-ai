@@ -20,13 +20,13 @@ Shweta is an enthusiastic, knowledgeable assistant with a distinct personality. 
 - **Example**: "What's the weather in London?" → Formatted weather description with emojis
 
 #### Service 2: 📚 Semantic Search via ChromaDB
-- **Implementation**: ChromaDB with persistent file storage
+- **Implementation**: ChromaDB persistent local directory storage with hybrid lexical + semantic query
 - **Functionality**:
-  - Pre-loaded knowledge base with 10 tech/AI documents
-  - Performs semantic similarity search on user queries
+  - Loads a curated knowledge base from `chroma_data/knowledge_base.csv`
+  - Uses a lexical candidate filter first and then ranks candidates with sentence-transformer similarity
+  - Builds a persistent semantic index on first run
   - Returns top 3 most relevant documents with relevance scores
-  - Automatically initializes on first run
-- **Knowledge Base Topics**: Python, Machine Learning, NLP, Data Science, Deep Learning, Embeddings, RAG, Fine-tuning, Prompt Engineering
+- **Knowledge Base Topics**: Python, Machine Learning, NLP, Data Science, Deep Learning, Embeddings, Vector Databases, RAG, Fine-tuning, Prompt Engineering
 - **Example**: "Tell me about embeddings" → Returns relevant documents from knowledge base
 
 #### Service 3: 🛠️ Function Calling Tools
@@ -98,12 +98,14 @@ The application will start at `http://localhost:7861`
 **Code Location**: `service_api_call()` function
 
 ### Service 2: Semantic Search
-- **Database**: ChromaDB with persistent DuckDB storage
-- **Data**: Pre-loaded with 10 relevant documents about AI and tech
-- **Retrieval**: Uses cosine distance for similarity ranking
+- **Database**: ChromaDB with persistent local directory storage
+- **Data**: Loads from `assignment_chat/chroma_data/knowledge_base.csv`
+- **Retrieval**: Uses a hybrid lexical + semantic approach inspired by labs `02_4_embeddings_api.ipynb`, `02_5_vectordb.ipynb`, and `02_6_embeddings_at_scale.ipynb`
+- **Embedding Model**: `all-MiniLM-L6-v2` via `SentenceTransformerEmbeddingFunction`
 - **Initialization**: Automatically creates and populates collection on first run
+- **Dataset Size**: Small curated CSV, well below the 40 MB assignment limit
 
-**Code Location**: `service_semantic_search()` and `_initialize_knowledge_base()` functions
+**Code Location**: `search_knowledge_base()` in `semantic_search_service.py`
 
 ### Service 3: Function Calling
 - **Tool 1**: Calculate statistics (count, sum, average, min, max)

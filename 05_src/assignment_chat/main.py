@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 import os
 
 from assignment_chat.prompts import return_instructions
-from assignment_chat.tools_services import (
-    get_weather,
-    search_knowledge_base,
+from assignment_chat.weather_service import get_weather
+from assignment_chat.semantic_search_service import search_knowledge_base
+from assignment_chat.tools_service import (
     calculate_statistics,
     convert_temperature,
     generate_random_fact
