@@ -1,0 +1,72 @@
+from langgraph.graph import StateGraph, MessagesState, START
+from langchain.chat_models import init_chat_model
+from langgraph.prebuilt.tool_node import ToolNode, tools_condition
+from langchain_core.messages import SystemMessage
+
+from dotenv import load_dotenv
+import os
+
+from assignment_chat.prompts import return_instructions
+from assignment_chat.tools_services import (
+    get_weather,
+    search_knowledge_base,
+    calculate_statistics,
+    convert_temperature,
+    generate_random_fact
+)
+from utils.logger import get_logger
+
+
+_logs = get_logger(__name__)
+load_dotenv(".env")
+load_dotenv(".secrets")
+
+# Set OpenAI environment variables for LangChain
+os.environ["OPENAI_API_KEY"] = os.getenv('API_GATEWAY_KEY', '')
+os.environ["OPENAI_API_BASE"] = 'https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1'
+
+# Disable LangSmith tracing to avoid authentication errors
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_ENDPOINT"] = ""
+
+# Initialize chat model with API key from environment
+chat_agent = init_chat_model(
+    "openai:gpt-4o-mini",
+)
+
+# Define available tools
+tools = [
+    get_weather,
+    search_knowledge_base,
+    calculate_statistics,
+    convert_temperature,
+    generate_random_fact
+]
+
+# Get system instructions
+instructions = return_instructions()
+
+
+def call_model(state: MessagesState):
+    """LLM decides whether to call a tool or not"""
+    response = chat_agent.bind_tools(tools).invoke(
+        [SystemMessage(content=instructions)] + state["messages"]
+    )
+    return {
+        "messages": [response]
+    }
+
+
+def get_graph():
+    """Build and return the LangGraph state graph"""
+    builder = StateGraph(MessagesState)
+    builder.add_node("call_model", call_model)
+    builder.add_node("tools", ToolNode(tools))
+    builder.add_edge(START, "call_model")
+    builder.add_conditional_edges(
+        "call_model",
+        tools_condition,
+    )
+    builder.add_edge("tools", "call_model")
+    graph = builder.compile()
+    return graph
