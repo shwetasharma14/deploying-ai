@@ -149,6 +149,10 @@ class CustomEmbeddingFunction:
 
         emb = get_embedding(input)
 
+        print("EMBEDDING TYPE:", type(emb))
+        print("EMBEDDING VALUE:", emb)
+        print("=== END DEBUG embed_query ===\n")
+
         if not isinstance(emb, list):
             raise RuntimeError(f"embed_query returned non-list: {emb}")
 
@@ -156,8 +160,16 @@ class CustomEmbeddingFunction:
 
 
 def get_embedding(text):
+    print("\n>>> DEBUG get_embedding CALLED")
+    print("RAW TEXT:", text, type(text))
     if isinstance(text, list):
         text = text[0]
+
+    if not isinstance(text, str):
+        print("ERROR: text is not a string!")
+        print("VALUE:", text)
+        print("TYPE:", type(text))
+        raise RuntimeError("get_embedding received non-string input")
 
     text = text.replace("\n", " ")
 
@@ -169,7 +181,13 @@ def get_embedding(text):
         input=text
     )
 
+    print("RAW RESPONSE:", response)
+
     emb = response.data[0].embedding
+
+    print("EMBED TYPE:", type(emb))
+    print("EMBED SAMPLE:", emb[:5] if isinstance(emb, list) else emb)
+    print("<<< END DEBUG get_embedding\n")
 
     if not isinstance(emb, list):
         raise RuntimeError(f"Embedding is not a list! Got: {type(emb)}, value: {emb}")
@@ -257,6 +275,8 @@ def search_knowledge_base(query: str) -> str:
         collection = _get_semantic_collection()
         print("DEBUG: Running lexical candidate search...")
         candidate_ids = _lexical_query_candidates(query, knowledge_df, top_n=6)
+        candidate_ids = [str(x) for x in candidate_ids if not isinstance(x, float)]
+
 
         print("DEBUG: Querying Chroma now...")
 
