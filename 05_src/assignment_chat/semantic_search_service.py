@@ -131,7 +131,14 @@ class CustomEmbeddingFunction:
         return self._name
 
     def __call__(self, input):
-        return [get_embedding(t) for t in input]
+        out = [get_embedding(t) for t in input]
+
+        for e in out:
+            if not isinstance(e, list):
+                raise RuntimeError(f"__call__ returned non-list embedding: {e}")
+
+        return out
+
 
     def embed_documents(self, input):
         return [get_embedding(t) for t in input]
@@ -139,8 +146,13 @@ class CustomEmbeddingFunction:
     def embed_query(self, input):
         if isinstance(input, list):
             input = input[0]
-        return get_embedding(input)
 
+        emb = get_embedding(input)
+
+        if not isinstance(emb, list):
+            raise RuntimeError(f"embed_query returned non-list: {emb}")
+
+        return emb
 
 
 def get_embedding(text):
@@ -149,6 +161,9 @@ def get_embedding(text):
 
     text = text.replace("\n", " ")
 
+    client = OpenAI(base_url='https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1',
+                    api_key='any value',
+                    default_headers={"x-api-key": os.getenv('API_GATEWAY_KEY')})
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=text
@@ -158,6 +173,9 @@ def get_embedding(text):
 
     if not isinstance(emb, list):
         raise RuntimeError(f"Embedding is not a list! Got: {type(emb)}, value: {emb}")
+    
+    if not all(isinstance(x, float) for x in emb):
+        raise RuntimeError(f"Embedding vector contains non-floats: {emb}")
 
     return emb
 
