@@ -74,7 +74,6 @@ def assignment_chat(message: str, history: list[dict]) -> str:
 # Create Gradio ChatInterface
 chat = gr.ChatInterface(
     fn=assignment_chat,
-    type="messages",
     title="🤖 Shweta's Multi-Service Chat Assistant",
     description="A smart assistant with weather, knowledge base, and tool access",
     examples=[
