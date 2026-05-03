@@ -4,7 +4,23 @@ from pathlib import Path
 
 import pandas as pd
 import chromadb
+from dotenv import load_dotenv
+import os
 from chromadb.utils import embedding_functions
+from langchain_openai import OpenAIEmbeddings
+
+env_dir = Path(__file__).resolve().parent
+load_dotenv(env_dir / ".env")
+load_dotenv(env_dir / ".secrets")
+
+api_gateway_key = os.getenv("API_GATEWAY_KEY")
+
+embeddings = OpenAIEmbeddings(
+    model="text-embedding-3-small",   # or any embedding model your gateway supports
+    base_url="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
+    api_key=api_gateway_key,
+)
+
 
 
 # ==================== SERVICE 2: SEMANTIC SEARCH ====================
@@ -12,7 +28,6 @@ from chromadb.utils import embedding_functions
 _CHROMA_DIR = Path(__file__).resolve().parent / "chroma_data"
 _KNOWLEDGE_CSV = _CHROMA_DIR / "knowledge_base.csv"
 _COLLECTION_NAME = "ai_knowledge_base"
-_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 _semantic_client = None
 _semantic_collection = None
 
@@ -91,25 +106,36 @@ def _get_semantic_collection():
     _ensure_chroma_dir()
     _semantic_client = chromadb.PersistentClient(path=str(_CHROMA_DIR))
 
-    existing_collections = [col.name for col in _semantic_client.list_collections()]
-    if _COLLECTION_NAME in existing_collections:
+    existing = [c.name for c in _semantic_client.list_collections()]
+    if _COLLECTION_NAME in existing:
         _semantic_collection = _semantic_client.get_collection(name=_COLLECTION_NAME)
         return _semantic_collection
 
+    # Load CSV
     knowledge_df = _load_knowledge_base()
-    embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=_EMBEDDING_MODEL
+
+    # Use API Gateway for embeddings
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        base_url="https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1",
+        api_key=api_gateway_key,
     )
+
+    def embedding_fn(texts):
+        return embeddings.embed_documents(texts)
+
     _semantic_collection = _semantic_client.create_collection(
         name=_COLLECTION_NAME,
         embedding_function=embedding_fn,
         metadata={"source": "assignment_chat"},
     )
+
     _semantic_collection.add(
         ids=knowledge_df["id"].astype(str).tolist(),
         documents=knowledge_df["content"].tolist(),
         metadatas=knowledge_df[["title", "topic"]].to_dict(orient="records"),
     )
+
     return _semantic_collection
 
 
