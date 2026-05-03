@@ -284,7 +284,7 @@ def search_knowledge_base(query: str) -> str:
             if candidate_ids:
                 result = collection.query(
                     query_texts=[query],
-                    ids=candidate_ids,
+                    where={"id": {"$in": candidate_ids}},
                     n_results=3,
                     include=["documents", "metadatas", "distances"],
                 )
