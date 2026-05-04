@@ -1,8 +1,82 @@
+from unittest import loader
+
 from langchain.tools import tool
+from langchain_community.document_loaders import JSONLoader
+from langchain_core.documents import Document
 import requests
+import json
+from pydantic import BaseModel
+from openai import OpenAI
+import os
 
 
 # ==================== SERVICE 1: WEATHER API ====================
+
+def load_weather_json(json_data):
+    text = json.dumps(json_data, indent=2)
+    doc = Document(page_content=text, metadata={"source": "weather_api"})
+    return [doc]
+
+def summarize_weather_data(weather_data):
+    print(f"Summarizing weather data: {weather_data}")
+    # Define the structured output model
+    class WeatherSummary(BaseModel):
+        Temp: str
+        Humidity: str
+        Windspeed: str
+        Summary: str
+        WeatherCode: str
+        WeatherDescription: str
+        Tone: str
+        InputTokens: int
+        OutputTokens: int
+
+    # Initialize OpenAI client
+    client = OpenAI(default_headers={"x-api-key": os.getenv('API_GATEWAY_KEY')},
+        base_url='https://k7uffyg03f.execute-api.us-east-1.amazonaws.com/prod/openai/v1')
+
+    # Choose a tone for the summary
+    tone = "Casual weather report style" 
+
+    # Define the system (developer) prompt
+    system_prompt = f"""You are an expert summarizer tasked with analyzing and summarizing weather reports. Given the weather data, you will extract key information and provide a concise summary in a {tone} style.
+
+    Your responsibilities include:
+    - Extracting the temperature, humidity, wind speed, and weather conditions (including weather code and description).
+    - Creating a concise and succinct summary of the weather data, no longer than 200 tokens, written in {tone} style.
+
+    Output the results in the specified structured format."""
+
+    # Define the user prompt with dynamic context
+    user_prompt = f"""Please analyze and summarize the weather data provided below.
+
+    {weather_data}
+
+    Provide the structured output as specified."""
+
+    # Make the API call with structured output
+    response = client.responses.parse(
+        model="gpt-4o-mini",
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        text_format=WeatherSummary
+    )
+
+    # Parse the response
+    weatherSummary = response.output_parsed
+    print(f"Raw API response: {response}")
+    print(f"Parsed Weather Summary: {weatherSummary}")
+
+    # Display the summary
+    print(f"Summary: {weatherSummary}")
+    print(f"Input Tokens: {weatherSummary.InputTokens}")
+    print(f"Output Tokens: {weatherSummary.OutputTokens}") 
+    print(f"Tone: {weatherSummary.Tone}")
+
+    return weatherSummary
+
 @tool
 def get_weather(location: str) -> str:
     """
@@ -46,54 +120,61 @@ def get_weather(location: str) -> str:
         }
         
         weather_response = requests.get(weather_url, params=weather_params, timeout=5)
-        weather_data = weather_response.json()
+
+        print(f"Weather API response status: {weather_response.status_code}")
+        print(f"Weather API response content: {weather_response.text}")
+        weather_data = load_weather_json(weather_response.json())
+
+        print(f"\nWeather data:\n{weather_data}\n")
+
+        weatherSummary = summarize_weather_data(weather_data)
         
-        if "current" not in weather_data:
-            return "Unable to fetch weather data at this time."
+        # if "current" not in weather_data:
+        #     return "Unable to fetch weather data at this time."
         
-        current = weather_data["current"]
+        # current = weather_data["current"]
         
-        # Transform data to natural language
-        temp = current["temperature_2m"]
-        humidity = current["relative_humidity_2m"]
-        wind_speed = current["wind_speed_10m"]
+        # # Transform data to natural language
+        # temp = current["temperature_2m"]
+        # humidity = current["relative_humidity_2m"]
+        # wind_speed = current["wind_speed_10m"]
         
-        # Simple weather code interpretation
-        weather_codes = {
-            0: "clear sky",
-            1: "mostly clear",
-            2: "partly cloudy",
-            3: "overcast",
-            45: "foggy",
-            48: "foggy with rime",
-            51: "light drizzle",
-            53: "moderate drizzle",
-            55: "dense drizzle",
-            61: "slight rain",
-            63: "moderate rain",
-            65: "heavy rain",
-            71: "slight snow",
-            73: "moderate snow",
-            75: "heavy snow",
-            80: "rain showers",
-            81: "moderate rain showers",
-            82: "violent rain showers",
-            85: "snow showers",
-            86: "heavy snow showers",
-            95: "thunderstorm",
-            96: "thunderstorm with hail",
-            99: "severe thunderstorm"
-        }
+        # # Simple weather code interpretation
+        # weather_codes = {
+        #     0: "clear sky",
+        #     1: "mostly clear",
+        #     2: "partly cloudy",
+        #     3: "overcast",
+        #     45: "foggy",
+        #     48: "foggy with rime",
+        #     51: "light drizzle",
+        #     53: "moderate drizzle",
+        #     55: "dense drizzle",
+        #     61: "slight rain",
+        #     63: "moderate rain",
+        #     65: "heavy rain",
+        #     71: "slight snow",
+        #     73: "moderate snow",
+        #     75: "heavy snow",
+        #     80: "rain showers",
+        #     81: "moderate rain showers",
+        #     82: "violent rain showers",
+        #     85: "snow showers",
+        #     86: "heavy snow showers",
+        #     95: "thunderstorm",
+        #     96: "thunderstorm with hail",
+        #     99: "severe thunderstorm"
+        # }
         
-        weather_description = weather_codes.get(current["weather_code"], "unknown conditions")
+        # weather_description = weather_codes.get(current["weather_code"], "unknown conditions")
         
-        response = f"🌍 Weather in {name}{', ' + country if country else ''}:\n"
-        response += f"Temperature: {temp}°F\n"
-        response += f"Conditions: {weather_description.capitalize()}\n"
-        response += f"Humidity: {humidity}%\n"
-        response += f"Wind Speed: {wind_speed} mph"
+        # response = f"🌍 Weather in {name}{', ' + country if country else ''}:\n"
+        # response += f"Temperature: {temp}°F\n"
+        # response += f"Conditions: {weather_description.capitalize()}\n"
+        # response += f"Humidity: {humidity}%\n"
+        # response += f"Wind Speed: {wind_speed} mph"
         
-        return response
+        return weatherSummary
         
     except requests.Timeout:
         return "Weather service request timed out. Please try again."
