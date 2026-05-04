@@ -129,51 +129,6 @@ def get_weather(location: str) -> str:
 
         weatherSummary = summarize_weather_data(weather_data)
         
-        # if "current" not in weather_data:
-        #     return "Unable to fetch weather data at this time."
-        
-        # current = weather_data["current"]
-        
-        # # Transform data to natural language
-        # temp = current["temperature_2m"]
-        # humidity = current["relative_humidity_2m"]
-        # wind_speed = current["wind_speed_10m"]
-        
-        # # Simple weather code interpretation
-        # weather_codes = {
-        #     0: "clear sky",
-        #     1: "mostly clear",
-        #     2: "partly cloudy",
-        #     3: "overcast",
-        #     45: "foggy",
-        #     48: "foggy with rime",
-        #     51: "light drizzle",
-        #     53: "moderate drizzle",
-        #     55: "dense drizzle",
-        #     61: "slight rain",
-        #     63: "moderate rain",
-        #     65: "heavy rain",
-        #     71: "slight snow",
-        #     73: "moderate snow",
-        #     75: "heavy snow",
-        #     80: "rain showers",
-        #     81: "moderate rain showers",
-        #     82: "violent rain showers",
-        #     85: "snow showers",
-        #     86: "heavy snow showers",
-        #     95: "thunderstorm",
-        #     96: "thunderstorm with hail",
-        #     99: "severe thunderstorm"
-        # }
-        
-        # weather_description = weather_codes.get(current["weather_code"], "unknown conditions")
-        
-        # response = f"🌍 Weather in {name}{', ' + country if country else ''}:\n"
-        # response += f"Temperature: {temp}°F\n"
-        # response += f"Conditions: {weather_description.capitalize()}\n"
-        # response += f"Humidity: {humidity}%\n"
-        # response += f"Wind Speed: {wind_speed} mph"
-        
         return weatherSummary
         
     except requests.Timeout:
