@@ -49,12 +49,21 @@ def assignment_chat(message: str, history: list[dict]) -> str:
     
     # Convert Gradio message history to LangChain format
     for msg in history:
-        if msg['role'] == 'user':
-            langchain_messages.append(HumanMessage(content=msg['content']))
-        elif msg['role'] == 'assistant':
-            langchain_messages.append(AIMessage(content=msg['content']))
+        print(f"Processing history message: {msg}")
+        if isinstance(msg, dict):
+            role = msg.get('role')
+            content = msg.get('content')
+        elif isinstance(msg, (list, tuple)) and len(msg) >= 2:
+            role, content = msg[0], msg[1]
+        else:
+            continue
+
+        if role == 'user':
+            langchain_messages.append(HumanMessage(content=content))
+        elif role == 'assistant':
+            langchain_messages.append(AIMessage(content=content))
             n += 1
-    
+
     # Add the current user message
     langchain_messages.append(HumanMessage(content=message))
 
@@ -74,6 +83,7 @@ def assignment_chat(message: str, history: list[dict]) -> str:
 # Create Gradio ChatInterface
 chat = gr.ChatInterface(
     fn=assignment_chat,
+    type="messages",
     title="🤖 Shweta's Multi-Service Chat Assistant",
     description="A smart assistant with weather, knowledge base, and tool access",
     examples=[
