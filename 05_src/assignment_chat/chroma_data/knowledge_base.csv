@@ -1,0 +1,11 @@
+id,title,topic,content
+1,Python Basics,Python,"Python is a high-level programming language designed for readability and developer productivity. It uses indentation for block structure and supports dynamic typing, making it a favorite for beginners and experts alike."
+2,Machine Learning Overview,Machine Learning,"Machine learning enables computers to learn from data and improve performance over time. The field includes supervised, unsupervised, and reinforcement learning techniques."
+3,Natural Language Processing,NLP,"Natural language processing (NLP) focuses on teaching machines to understand and generate human language, including tasks like sentiment analysis, translation, and question answering."
+4,Data Science Fundamentals,Data Science,"Data science combines statistics, programming, and domain knowledge to extract insights from data. It often includes data cleaning, visualization, modeling, and evaluation."
+5,Deep Learning Concepts,Deep Learning,"Deep learning is a subset of machine learning that uses neural networks with many layers to learn high-level representations from large amounts of data."
+6,Embeddings and Semantic Search,Embeddings,"Embeddings are numeric vector representations that capture the meaning of text. They enable semantic search by comparing the distance between vectors instead of exact keyword matches."
+7,Vector Databases,Vector Databases,"Vector databases store and retrieve items by their vector embeddings. This allows semantic similarity search and supports applications like recommendation and question answering."
+8,Retrieval Augmented Generation,RAG,"RAG combines retrieval from an external knowledge source with a generative model to produce more accurate and contextually grounded responses."
+9,Fine-tuning Models,Fine-tuning,"Fine-tuning adapts a pre-trained model to a specific task or domain by continuing training on domain-specific examples, improving performance on targeted use cases."
+10,Prompt Engineering,Prompting,"Prompt engineering involves designing the input prompts and instructions for generative AI models to produce better outputs for a given task."
